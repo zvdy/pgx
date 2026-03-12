@@ -117,6 +117,7 @@ func init() {
 		pgtype.OIDOID:         1,
 		pgtype.TimestampOID:   1,
 		pgtype.TimestamptzOID: 1,
+		pgtype.TimetzOID:      1,
 		pgtype.XIDOID:         1,
 	}
 }
@@ -712,7 +713,7 @@ func (r *Rows) ColumnTypeScanType(index int) reflect.Type {
 		return reflect.TypeOf(false)
 	case pgtype.NumericOID:
 		return reflect.TypeOf(float64(0))
-	case pgtype.DateOID, pgtype.TimestampOID, pgtype.TimestamptzOID:
+	case pgtype.DateOID, pgtype.TimestampOID, pgtype.TimestamptzOID, pgtype.TimetzOID:
 		return reflect.TypeOf(time.Time{})
 	case pgtype.ByteaOID:
 		return reflect.TypeOf([]byte(nil))
@@ -829,6 +830,16 @@ func (r *Rows) Next(dest []driver.Value) error {
 				}
 			case pgtype.TimestamptzOID:
 				var d pgtype.Timestamptz
+				scanPlan := m.PlanScan(dataTypeOID, format, &d)
+				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
+					err := scanPlan.Scan(src, &d)
+					if err != nil {
+						return nil, err
+					}
+					return d.Value()
+				}
+			case pgtype.TimetzOID:
+				var d pgtype.Timetz
 				scanPlan := m.PlanScan(dataTypeOID, format, &d)
 				r.valueFuncs[i] = func(src []byte) (driver.Value, error) {
 					err := scanPlan.Scan(src, &d)
